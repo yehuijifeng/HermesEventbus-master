@@ -64,11 +64,14 @@ public class TypeUtils {
         }
     }
 
+    //给当前方法生成一个与之对应的id
     public static String getMethodId(Method method) {
         MethodId methodId = method.getAnnotation(MethodId.class);
+        //如果有注解，则直接使用关注中的id
         if (methodId != null) {
             return methodId.value();
         } else {
+            //没有注解，则生成一个方法名（参数……）的id
             StringBuilder result = new StringBuilder(method.getName());
             result.append('(').append(getMethodParameters(method.getParameterTypes())).append(')');
             return result.toString();
@@ -271,13 +274,16 @@ public class TypeUtils {
         return parameterWrappers;
     }
 
+    //检查当前类
     public static void validateClass(Class<?> clazz) {
         if (clazz == null) {
             throw new IllegalArgumentException("Class object is null.");
         }
+        //如果当前类是接口或者是java基础数据类型则return
         if (clazz.isPrimitive() || clazz.isInterface()) {
             return;
         }
+        //如果当前class带有hermes的注解WithinProcess，则表明该类是不能被其他进程读取的
         if (clazz.isAnnotationPresent(WithinProcess.class)) {
             throw new IllegalArgumentException(
                     "Error occurs when registering class " + clazz.getName()
@@ -285,19 +291,23 @@ public class TypeUtils {
                             + " from outside the process.");
         }
 
+        //当前类不能是匿名类
         if (clazz.isAnonymousClass()) {
             throw new IllegalArgumentException(
                     "Error occurs when registering class " + clazz.getName()
                             + ". Anonymous class cannot be accessed from outside the process.");
         }
+        //当前类不能是private类型的，局部变量
         if (clazz.isLocalClass()) {
             throw new IllegalArgumentException(
                     "Error occurs when registering class " + clazz.getName()
                             + ". Local class cannot be accessed from outside the process.");
         }
+        //当前类的父类是context则直接返回
         if (Context.class.isAssignableFrom(clazz)) {
             return;
         }
+        //当前class是抽象类
         if (Modifier.isAbstract(clazz.getModifiers())) {
             throw new IllegalArgumentException(
                     "Error occurs when registering class " + clazz.getName()

@@ -30,17 +30,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by Xiaofei on 16/4/7.
+ * 缓存类
  */
 public class TypeCenter {
     
     private static volatile TypeCenter sInstance = null;
 
+    //带注解的class
     private final ConcurrentHashMap<String, Class<?>> mAnnotatedClasses;
 
+    //原生的class
     private final ConcurrentHashMap<String, Class<?>> mRawClasses;
 
+    //带注解的class的方法
     private final ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Method>> mAnnotatedMethods;
 
+    //原生的class的方法
     private final ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Method>> mRawMethods;
 
     private TypeCenter() {
@@ -61,27 +66,37 @@ public class TypeCenter {
         return sInstance;
     }
 
+    //注册类
     private void registerClass(Class<?> clazz) {
+        //是否带有classid注解
         ClassId classId = clazz.getAnnotation(ClassId.class);
         if (classId == null) {
+            //没有则存入原始classmap中
             String className = clazz.getName();
             mRawClasses.putIfAbsent(className, clazz);
         } else {
+            //如多有class注解，则存储注解classmap中
             String className = classId.value();
             mAnnotatedClasses.putIfAbsent(className, clazz);
         }
     }
 
+    //注册方法
     private void registerMethod(Class<?> clazz) {
+        //获得所有方法
         Method[] methods = clazz.getMethods();
         for (Method method : methods) {
+            //是否带有methodid注解
             MethodId methodId = method.getAnnotation(MethodId.class);
             if (methodId == null) {
+                //没有，则放入
                 mRawMethods.putIfAbsent(clazz, new ConcurrentHashMap<String, Method>());
                 ConcurrentHashMap<String, Method> map = mRawMethods.get(clazz);
+                //生成方法id作为map的key
                 String key = TypeUtils.getMethodId(method);
                 map.putIfAbsent(key, method);
             } else {
+                //有注解，则放入
                 mAnnotatedMethods.putIfAbsent(clazz, new ConcurrentHashMap<String, Method>());
                 ConcurrentHashMap<String, Method> map = mAnnotatedMethods.get(clazz);
                 String key = TypeUtils.getMethodId(method);
@@ -90,9 +105,13 @@ public class TypeCenter {
         }
     }
 
+    //注册
     public void register(Class<?> clazz) {
+        //检查类，如果不合法则抛出异常
         TypeUtils.validateClass(clazz);
+        //注册类
         registerClass(clazz);
+        //注册方法
         registerMethod(clazz);
     }
 

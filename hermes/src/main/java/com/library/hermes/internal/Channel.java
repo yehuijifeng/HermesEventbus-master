@@ -183,6 +183,7 @@ public class Channel {
         return sInstance;
     }
 
+    //绑定其他进程
     public void bind(Context context, String packageName, Class<? extends HermesService> service) {
         HermesServiceConnection connection;
         synchronized (this) {

@@ -50,6 +50,7 @@ public class Hermes {
 
     private static Context sContext = null;
 
+    //服务端，主进程注册，其他进程连接
     public static void register(Object object) {
         register(object.getClass());
     }
@@ -67,7 +68,9 @@ public class Hermes {
      * @param clazz
      */
     public static void register(Class<?> clazz) {
+        //注册之前先检查是否调用了init（）
         checkInit();
+        //缓存类注册
         TYPE_CENTER.register(clazz);
     }
 
@@ -187,22 +190,28 @@ public class Hermes {
         return getProxy(service, object);
     }
 
+    //其他进程连接
     public static void connect(Context context) {
+        //HermesService.HermesService0需要我们在主进程的AndroidManifest中注册
         connectApp(context, null, HermesService.HermesService0.class);
     }
 
+    //如果当前app有多个进程，则需要调用该方法来指定哪个service
     public static void connect(Context context, Class<? extends HermesService> service) {
         // TODO callbacks should be handled as an exception.
         // It seems that callbacks may not be registered.
         connectApp(context, null, service);
     }
 
+    //如果是其他app，则需要调用该方法
     public static void connectApp(Context context, String packageName) {
         connectApp(context, packageName, HermesService.HermesService0.class);
     }
 
     public static void connectApp(Context context, String packageName, Class<? extends HermesService> service) {
+        //初始化，将当前app的application赋值过来
         init(context);
+        //绑定操作
         CHANNEL.bind(context.getApplicationContext(), packageName, service);
     }
 
