@@ -19,7 +19,7 @@ import java.lang.reflect.Proxy;
  * Date: 2019/8/20 23:25
  * Describe: 手写Hermes
  */
-public class Hermes {
+public class Hermes1 {
 
     //这里保存的是application的context对象，因为如果多个app之间传递信息，则需要用到的是具有包名识别的application对象
     private Context mContext;
@@ -35,14 +35,14 @@ public class Hermes {
     public static final int TYPE_GET = 1;
 
     //单例对象
-    private static Hermes ourInstance = new Hermes();
+    private static Hermes1 ourInstance = new Hermes1();
 
-    private Hermes() {
+    private Hermes1() {
         serviceConnectionManager = ServiceConnectionManager.getInstance();
         typeCenter = TypeCenter.getInstance();
     }
 
-    public static Hermes getDefault() {
+    public static Hermes1 getDefault() {
         return ourInstance;
     }
 

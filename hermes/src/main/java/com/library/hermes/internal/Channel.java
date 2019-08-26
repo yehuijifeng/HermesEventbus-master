@@ -1,19 +1,17 @@
 /**
- *
  * Copyright 2016 Xiaofei
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package com.library.hermes.internal;
@@ -46,7 +44,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Created by Xiaofei on 16/4/11.
+ * 通道
  */
 public class Channel {
 
@@ -183,44 +181,75 @@ public class Channel {
         return sInstance;
     }
 
-    //绑定其他进程
+    /**
+     * 绑定服务
+     *
+     * @param context     上下文
+     * @param packageName 不同app的包名
+     * @param service     绑定的服务
+     */
     public void bind(Context context, String packageName, Class<? extends HermesService> service) {
+        //继承ServiceConnection
         HermesServiceConnection connection;
         synchronized (this) {
+            //当前服务是否绑定，将建getBound(class)
             if (getBound(service)) {
                 return;
             }
+            //绑定服务的缓存中如果也有，且绑定过了，则不在绑定
             Boolean binding = mBindings.get(service);
             if (binding != null && binding) {
                 return;
             }
+            //当前service存入缓存，绑定的时候才将缓存中的状态改过来
             mBindings.put(service, true);
+            //new一个HermesServiceConnection
             connection = new HermesServiceConnection(service);
+            //将HermesServiceConnection存入缓存
             mHermesServiceConnections.put(service, connection);
         }
         Intent intent;
+        //如果包名为null，则说明是同一个app的不同进程
         if (TextUtils.isEmpty(packageName)) {
             intent = new Intent(context, service);
         } else {
+            //指定报名，进程在不同的app中
             intent = new Intent();
             intent.setClassName(packageName, service.getName());
         }
+        //绑定服务
         context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
+    /**
+     * 断开连接
+     *
+     * @param context 上下文
+     * @param service 服务
+     */
     public void unbind(Context context, Class<? extends HermesService> service) {
         synchronized (this) {
+            //从缓存中拿到当前service的状态
             Boolean bound = mBounds.get(service);
             if (bound != null && bound) {
+                //缓存中的service并没有被清除只是解除绑定
                 HermesServiceConnection connection = mHermesServiceConnections.get(service);
                 if (connection != null) {
+                    //取消绑定
                     context.unbindService(connection);
                 }
+                //将缓存中的连接状态改成未绑定
                 mBounds.put(service, false);
             }
         }
     }
 
+    /**
+     * 发送
+     * @param service
+     * @param mail
+     * @return
+     */
     public Reply send(Class<? extends HermesService> service, Mail mail) {
         IHermesService hermesService = mHermesServices.get(service);
         try {
@@ -248,7 +277,14 @@ public class Channel {
         }
     }
 
+    /**
+     * 检查是否绑定service
+     *
+     * @param service HermesService
+     * @return bl
+     */
     public boolean getBound(Class<? extends HermesService> service) {
+        //从缓存中获取
         Boolean bound = mBounds.get(service);
         return bound != null && bound;
     }
@@ -257,11 +293,16 @@ public class Channel {
         mListener = listener;
     }
 
+    //判断当前service是否连接
     public boolean isConnected(Class<? extends HermesService> service) {
+        //从缓存中拿到
         IHermesService hermesService = mHermesServices.get(service);
         return hermesService != null && hermesService.asBinder().pingBinder();
     }
 
+    /**
+     * 服务连接
+     */
     private class HermesServiceConnection implements ServiceConnection {
 
         private Class<? extends HermesService> mClass;
@@ -270,13 +311,20 @@ public class Channel {
             mClass = service;
         }
 
+        //服务连接
+        @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
             synchronized (Channel.this) {
+                //绑定对象service的缓存
                 mBounds.put(mClass, true);
+                //是否绑定了的缓存
                 mBindings.put(mClass, false);
+                //该方法与aidl的方法对应，属于跨进程的原生方法
                 IHermesService hermesService = IHermesService.Stub.asInterface(service);
+                //将当前class和得到的跨进程对象放入缓存
                 mHermesServices.put(mClass, hermesService);
                 try {
+                    //注册回调，在当前线程中注册
                     hermesService.register(mHermesServiceCallback, Process.myPid());
                 } catch (RemoteException e) {
                     e.printStackTrace();
@@ -290,9 +338,13 @@ public class Channel {
             }
         }
 
+        //服务断开
+        @Override
         public void onServiceDisconnected(ComponentName className) {
             synchronized (Channel.this) {
+                //从缓存中断开连接
                 mHermesServices.remove(mClass);
+                //绑定的标识修改成未绑定
                 mBounds.put(mClass, false);
                 mBindings.put(mClass, false);
             }

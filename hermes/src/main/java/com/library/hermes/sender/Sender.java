@@ -39,7 +39,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 /**
- * Created by Xiaofei on 16/4/7.
+ * 发送方对象
  */
 public abstract class Sender {
 

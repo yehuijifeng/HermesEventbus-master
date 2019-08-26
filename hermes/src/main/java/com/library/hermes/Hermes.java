@@ -1,19 +1,17 @@
 /**
- *
  * Copyright 2016 Xiaofei
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package com.library.hermes;
@@ -36,25 +34,27 @@ import java.lang.reflect.Proxy;
 
 /**
  * Created by Xiaofei on March 31, 2016.
- *
  */
 public class Hermes {
-
+    //日志
     private static final String TAG = "HERMES";
 
+    //缓存需要挂进程的class和method
     private static final TypeCenter TYPE_CENTER = TypeCenter.getInstance();
 
+    //通道
     private static final Channel CHANNEL = Channel.getInstance();
 
     private static final HermesGc HERMES_GC = HermesGc.getInstance();
 
     private static Context sContext = null;
 
-    //服务端，主进程注册，其他进程连接
+    //服务端，主进程注册class，这里参数是object
     public static void register(Object object) {
         register(object.getClass());
     }
 
+    //检查是否在主进程调用了init(conetxt)方法
     private static void checkInit() {
         if (sContext == null) {
             throw new IllegalStateException("Hermes has not been initialized.");
@@ -62,10 +62,11 @@ public class Hermes {
     }
 
     /**
-     * There is no need to register class in local process!
+     * 不需要在当地注册类process!
+     * <p>
+     * 但如果一个方法的返回类型是不完全相同的返回类型的方法,它应该是注册。
      *
-     * But if the returned type of a method is not exactly the same with the return type of the method, it should be registered.
-     * @param clazz
+     * @param clazz 需要注册的class
      */
     public static void register(Class<?> clazz) {
         //注册之前先检查是否调用了init（）
@@ -78,7 +79,9 @@ public class Hermes {
         return sContext;
     }
 
+    //首先在主进程中使用init来初始化hermes，传入context
     public static void init(Context context) {
+        //如果已经有了ApplicationContext则不重新赋值
         if (sContext != null) {
             return;
         }
@@ -95,8 +98,8 @@ public class Hermes {
 
     private static <T> T getProxy(Class<? extends HermesService> service, ObjectWrapper object) {
         Class<?> clazz = object.getObjectClass();
-        T proxy =  (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz},
-                    new HermesInvocationHandler(service, object));
+        T proxy = (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz},
+                new HermesInvocationHandler(service, object));
         HERMES_GC.register(service, proxy, object.getTimeStamp());
         return proxy;
     }
@@ -105,12 +108,25 @@ public class Hermes {
         return newInstanceInService(HermesService.HermesService0.class, clazz, parameters);
     }
 
+    /**
+     * new一个跨进程的对象
+     *
+     * @param service    hermesservice
+     * @param clazz      该对象对应的接口
+     * @param parameters 如果当前对象的构造方法有多个，则这里需要传递对象的参数来指定调用哪一个构造方法
+     * @param <T>        接口对象
+     */
     public static <T> T newInstanceInService(Class<? extends HermesService> service, Class<T> clazz, Object... parameters) {
+        //如果当前clazz不是接口，则抛出异常
         TypeUtils.validateServiceInterface(clazz);
+        //检查当前调用的service是否已经注册过并且绑定了
         checkBound(service);
+        //new一个ObjectWrapper，clazz对应的是new当前对象
         ObjectWrapper object = new ObjectWrapper(clazz, ObjectWrapper.TYPE_OBJECT_TO_NEW);
+        //通过发送方指示器post一个sender对象
         Sender sender = SenderDesignator.getPostOffice(service, SenderDesignator.TYPE_NEW_INSTANCE, object);
         try {
+            //得到回复对象reply，reply发送参数集合
             Reply reply = sender.send(null, parameters);
             if (reply != null && !reply.success()) {
                 Log.e(TAG, "Error occurs during creating instance. Error code: " + reply.getErrorCode());
@@ -190,24 +206,31 @@ public class Hermes {
         return getProxy(service, object);
     }
 
-    //其他进程连接
+    //其他进程中调用该方法来实现连接
     public static void connect(Context context) {
-        //HermesService.HermesService0需要我们在主进程的AndroidManifest中注册
+        //该方法需要我们在主进程的AndroidManifest中注册HermesService.HermesService0.class
         connectApp(context, null, HermesService.HermesService0.class);
     }
 
-    //如果当前app有多个进程，则需要调用该方法来指定哪个service
+    //如果当前app有多个进程，则需要调用该方法来指定哪个service、
+    //当然，每个class都是继承HermesService，详见HermesService
     public static void connect(Context context, Class<? extends HermesService> service) {
-        // TODO callbacks should be handled as an exception.
-        // It seems that callbacks may not be registered.
         connectApp(context, null, service);
     }
 
-    //如果是其他app，则需要调用该方法
+    //当两个进程在多个app中的时候需要调用该方法来指定主进程的包名
     public static void connectApp(Context context, String packageName) {
+        //主进程（packageName）中同样需要注册HermesService.HermesService0.class
         connectApp(context, packageName, HermesService.HermesService0.class);
     }
 
+    /**
+     * 连接两个进程的方法
+     *
+     * @param context     当前进程的context
+     * @param packageName 主进程的包名，两个进程在不同的app中则需要指定该参数
+     * @param service     挂进程需要使用到的service，都继承HermesService
+     */
     public static void connectApp(Context context, String packageName, Class<? extends HermesService> service) {
         //初始化，将当前app的application赋值过来
         init(context);
@@ -215,22 +238,27 @@ public class Hermes {
         CHANNEL.bind(context.getApplicationContext(), packageName, service);
     }
 
+    //断开连接
     public static void disconnect(Context context) {
         disconnect(context, HermesService.HermesService0.class);
     }
 
+    //断开连接，传递进来application和hermesservice
     public static void disconnect(Context context, Class<? extends HermesService> service) {
         CHANNEL.unbind(context.getApplicationContext(), service);
     }
 
+    //判断当前服务是否连接
     public static boolean isConnected() {
         return isConnected(HermesService.HermesService0.class);
     }
 
+    //判断当前服务是否连接
     public static boolean isConnected(Class<? extends HermesService> service) {
         return CHANNEL.isConnected(service);
     }
 
+    //添加hermes连接监听
     public static void setHermesListener(HermesListener listener) {
         CHANNEL.setHermesListener(listener);
     }

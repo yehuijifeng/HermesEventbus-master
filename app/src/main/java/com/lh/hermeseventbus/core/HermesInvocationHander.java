@@ -23,7 +23,7 @@ public class HermesInvocationHander implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        Responce responce = Hermes.getDefault().sendObjectRequest(hermeService, aClass, method, args);
+        Responce responce = Hermes1.getDefault().sendObjectRequest(hermeService, aClass, method, args);
         if(!TextUtils.isEmpty(responce.getData())){
             ResponceBean responceBean = gson.fromJson(responce.getData(), ResponceBean.class);
             if(responceBean.getData() != null){

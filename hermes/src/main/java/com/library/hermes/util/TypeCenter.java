@@ -29,8 +29,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Created by Xiaofei on 16/4/7.
- * 缓存类
+ * 缓存类，缓存所有需要挂进程的class和method
  */
 public class TypeCenter {
     
@@ -47,14 +46,13 @@ public class TypeCenter {
 
     //原生的class的方法
     private final ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Method>> mRawMethods;
-
+    //初始化缓存map
     private TypeCenter() {
         mAnnotatedClasses = new ConcurrentHashMap<String, Class<?>>();
         mRawClasses = new ConcurrentHashMap<String, Class<?>>();
         mAnnotatedMethods = new ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Method>>();
         mRawMethods = new ConcurrentHashMap<Class<?>, ConcurrentHashMap<String, Method>>();
     }
-
     public static TypeCenter getInstance() {
         if (sInstance == null) {
             synchronized (TypeCenter.class) {

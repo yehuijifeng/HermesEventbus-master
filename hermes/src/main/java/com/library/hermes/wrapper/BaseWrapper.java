@@ -29,6 +29,10 @@ public class BaseWrapper {
 
     private String mName;
 
+    /**
+     * @param isName
+     * @param name
+     */
     protected void setName(boolean isName, String name) {
         if (name == null) {
             throw new IllegalArgumentException();

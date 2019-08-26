@@ -7,8 +7,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.lh.hermeseventbus.R;
 import com.lh.hermeseventbus.bean.Friend;
-import com.lh.hermeseventbus.core.Hermes;
+import com.lh.hermeseventbus.core.Hermes1;
 import com.lh.hermeseventbus.manager.UserManager;
+import com.library.hermes.Hermes;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -20,8 +21,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Hermes.getDefault().init(this);
-        Hermes.getDefault().register(UserManager.class);//注册usermanager类
+        Hermes.init(this);
+        Hermes.register(UserManager.class);//注册usermanager类
         UserManager.getInstance().setFriend(new Friend("admin", 18));
 
     }

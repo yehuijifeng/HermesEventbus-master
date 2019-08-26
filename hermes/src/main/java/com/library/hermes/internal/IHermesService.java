@@ -27,6 +27,9 @@ import android.os.RemoteException;
 
 import java.util.List;
 
+/**
+ * 自定义的跨进程的接口，继承IInterface，目的是实现aidl同样效果的跨进程通信
+ */
 public interface IHermesService extends IInterface {
 
     abstract class Stub extends Binder implements IHermesService {
@@ -182,7 +185,7 @@ public interface IHermesService extends IInterface {
     }
 
     Reply send(Mail mail) throws RemoteException;
-
+    //注册
     void register(IHermesServiceCallback callback, int pid) throws RemoteException;
 
     void gc(List<Long> timeStamps) throws RemoteException;
